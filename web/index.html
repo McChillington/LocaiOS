@@ -1,0 +1,56 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>LocaiOS Chat</title>
+  <style>
+    body{font-family: -apple-system, system-ui, sans-serif; margin:0; padding:0; display:flex; flex-direction:column; height:100vh;}
+    #messages{flex:1; overflow:auto; padding:12px;}
+    .msg.user{ text-align:right; color:#fff; background:#0a84ff; display:inline-block; padding:8px 12px; border-radius:12px; margin:6px;}
+    .msg.ai{ text-align:left; background:#f1f1f1; display:inline-block; padding:8px 12px; border-radius:12px; margin:6px;}
+    #composer{display:flex; padding:8px; border-top:1px solid #ddd;}
+    input{flex:1; padding:12px; border-radius:10px; border:1px solid #ccc; margin-right:8px;}
+    button{padding:12px 14px; border-radius:10px; border:none; background:#0a84ff; color:white;}
+  </style>
+</head>
+<body>
+  <div id="messages"></div>
+  <div id="composer">
+    <input id="input" placeholder="Say something..." />
+    <button id="send">Send</button>
+  </div>
+
+<script>
+const messages = document.getElementById('messages');
+function add(msg, cls='ai'){ const el=document.createElement('div'); el.className='msg '+cls; el.textContent=msg; messages.appendChild(el); messages.scrollTop = messages.scrollHeight; }
+
+async function sendMessage(text){
+  add(text,'user');
+  add('…thinking…','ai');
+  try{
+    // call the local backend (the iOS app will expose /api/chat on localhost)
+    const resp = await fetch('/api/chat', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({prompt:text})
+    });
+    const data = await resp.json();
+    // replace the "thinking" with real answer
+    const thinking = messages.querySelector('.msg.ai:last-child');
+    if(thinking) thinking.textContent = data.response ?? '[no response]';
+  }catch(e){
+    add('Error contacting local AI: '+e.message,'ai');
+  }
+}
+
+document.getElementById('send').addEventListener('click', ()=>{
+  const t = document.getElementById('input');
+  if(!t.value.trim()) return;
+  sendMessage(t.value.trim());
+  t.value='';
+});
+document.getElementById('input').addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ document.getElementById('send').click(); }});
+</script>
+</body>
+</html>
